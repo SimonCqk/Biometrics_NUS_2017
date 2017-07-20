@@ -6,4 +6,4 @@
    
    
 - Assignment One: Simple `Python` practices.
-- Assignment Two: Image Processing. 
+- Assignment Two: Image Process. 
