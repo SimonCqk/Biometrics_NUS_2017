@@ -1,0 +1,9 @@
+Q:What do you notice?
+A: the first few singular values are much bigger than the others, and they decrease rapidly.
+
+Q:Briey describe what you notice.
+A:with the increasing of value K, the quality of image is also increasing.
+
+Q:Is it worth transmitting when K = 200 ?
+A:when the K increases to 100 , the image is clear enough, so there is no need to
+   transmit when K=200, although it's much closer to the origin , it is more than wasting.

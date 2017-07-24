@@ -1,0 +1,10 @@
+(c)
+Q:Re-calculate x. What do you notice?
+A: when the b is recorrected, x turn out to be [0.01;0.01],
+ which is the right answer. And the error in A was squared by x, then shown in b.
+
+(d)
+Q:Using the result of part (b), explain what happened in part (c).
+A:explain:
+Since the kp(A) is so big ,so when there is error in b,
+the corresponding error in x is multiplied many times, and it seems quietly different.
