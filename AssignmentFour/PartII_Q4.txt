@@ -1,0 +1,3 @@
+ the pose of test1 can not be detected.
+ test2 can be detected but it has big deviation, which takes chin as face.
+ test3 is well-detected, and the face area is almost outlined.

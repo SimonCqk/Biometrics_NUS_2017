@@ -1,0 +1,21 @@
+I do test THREE different factors which
+may affect the results of face detector.
+Factor A: number of faces in a single image.
+Factor B: shadow(light) on the surface of face.
+Factor C: the quality of image.
+
+The results say that:
+
+As for factor A(number of faces in a single image):
+actually on the whole, it works well, but some faces were ignored, I guess
+that the differences between poses is the main reason.Cuz in shadow.jpg, there're
+also many faces, but the detector works quite well.
+
+As for factor B(shadow(light) on the surface of face.):
+except for the last one, which is badly lack of light, other heads were detected well.
+So it means the shadow really does effects for the performence of face detectors.
+
+As for factor C(the quality of image):
+blur.jpg has kinds of faces in different quality levels.
+and the result shows that faces in bad quality are usually undetected,
+but some exceptions also exist, which really confused me.

@@ -5,7 +5,7 @@ from matplotlib import pyplot as plt
 
 P = (2, 3)
 C = (3, 2)
-THETA = [i * np.pi / 4 for i in range(8)]
+THETA = [i * np.pi / 4 for i in range(1, 8)]
 R = [np.mat('{cos},-{sin},0;{sin},{cos},0;0,0,1'.format(cos=np.cos(t), sin=np.sin(t))) for t in THETA]
 T1 = np.mat('1,0,{0};0,1,{1};0,0,1'.format(-C[0], -C[1]))
 T2 = np.mat('1,0,{0};0,1,{1};0,0,1'.format(C[0], C[1]))
@@ -16,8 +16,12 @@ for i in range(len(THETA)):
 	p_list.append(pv[0:2] / pv[2])
 
 plt.plot(P[0], P[1], 'b.')
+plt.plot(C[0], C[1], 'b.')
 for i in p_list:
 	plt.plot(i[0], i[1], 'b.')
 
-plt.annotate('Origin P (2,3)', P, xytext=(2.2, 3.2), arrowprops=dict(arrowstyle='->'))
+plt.annotate('Origin Point P', P, xytext=(2.15, 3.15), arrowprops=dict(arrowstyle='->'))
+plt.annotate('Rotate Point C', C, xytext=(3.15, 2.15), arrowprops=dict(arrowstyle='->'))
+plt.title('Geometric Transform')
+plt.savefig('PartIII_Geometric_Transform.png')
 plt.show()
