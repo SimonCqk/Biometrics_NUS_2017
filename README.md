@@ -1,6 +1,6 @@
 ###Tutorial
 
-> It's a Repos for `NUS-2017 Summer Program` , whose TOPIC is `Biometric` .
+> It's a Repos for `NUS-2017 Summer Program` , whose TOPIC is `Understanding Biometric` .
  <br>
   So in principle , it is applied privately .
    
