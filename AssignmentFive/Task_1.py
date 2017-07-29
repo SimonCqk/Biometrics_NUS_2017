@@ -1,13 +1,13 @@
 #!/usr/bin/python
 # -*- coding:utf-8 -*-
-import operator
 import os
 
 import cv2
 import numpy as np
 import scipy.linalg as linalg
 
-train_path = 'AssignmentFive/face/train'
+TRAIN_PATH = 'face/train'
+TEST_PATH = 'face/test'
 
 
 def ComputeNorm(x):
@@ -90,41 +90,6 @@ def read_faces(directory):
 	return faces, idLabel
 
 
-def myLDA(A, Labels):
-	# function [W,m]=myLDA(A,Label)
-	# computes LDA of matrix A
-	# A: D by N data matrix. Each column is a random vector
-	# W: D by K matrix whose columns are the principal components in decreasing order
-	# m: mean of each projection
-	classLabels = np.unique(Labels)
-	classNum = len(classLabels)
-	dim, datanum = A.shape
-	totalMean = np.mean(A, 1)
-	partition = [np.where(Labels == label)[0] for label in classLabels]
-	classMean = [(np.mean(A[:, idx], 1), len(idx)) for idx in partition]
-
-	# compute the within-class scatter matrix
-	W = np.zeros((dim, dim))
-	for idx in partition:
-		W += np.cov(A[:, idx], rowvar=1) * len(idx)
-
-	# compute the between-class scatter matrix
-	B = np.zeros((dim, dim))
-	for mu, class_size in classMean:
-		offset = mu - totalMean
-		B += np.outer(offset, offset) * class_size
-
-	# solve the generalized eigenvalue problem for discriminant directions
-	ew, ev = linalg.eig(B, W)
-
-	sorted_pairs = sorted(enumerate(ew), key=operator.itemgetter(1), reverse=True)
-	selected_ind = [ind for ind, val in sorted_pairs[:classNum - 1]]
-	LDAW = ev[:, selected_ind]
-	Centers = [np.dot(mu, LDAW) for mu, class_size in classMean]
-	Centers = np.array(Centers).T
-	return LDAW, Centers, classLabels
-
-
 def float2uint8(arr):
 	mmin = arr.min()
 	mmax = arr.max()
@@ -133,33 +98,73 @@ def float2uint8(arr):
 	return arr
 
 
-if __name__ == '__main__':
-	faces, id_label = read_faces(train_path)
+def enroll(train_path):
+	faces, labels = read_faces(train_path)
 	# train PCA
 	(W, LL, m) = myPCA(faces)
 	K = 30
 	W_e = W[:, :K]
-
 	# PCA extract
 	Y_PCA = []
-	for idx in range(W.shape[1]):
-		y = np.dot(W_e.T, (faces[:, idx] - m))
+	for idx in range(faces.shape[1]):
+		y = np.dot(W_e.T, (faces.T[idx] - m))
 		Y_PCA.append(y)
+	# compute matrix Z
+	Z = []
+	for i in range(0, len(Y_PCA), 12):
+		z = Y_PCA[i:i + 12]
+		Z.append(np.mean(np.transpose(z), axis=1))
+	Z = np.array(Z)
+	return Z
 
-	# PCA back projected
-	back = [np.dot(W_e, it) + m for it in Y_PCA]
 
-	# LDA extract
-	K1 = 90
-	W1 = W[:, :K1]
-	X_LDA = []
+def identify(test_path, train_path):
+	faces, labels = read_faces(test_path)
+	# train PCA
+	(W, LL, m) = myPCA(faces)
+	K = 30
+	W_e = W[:, :K]
+	# PCA extract
+	Y_PCA = []
 	for idx in range(faces.shape[1]):
-		x = np.dot(W1.T, (faces[:, idx] - m))
-		X_LDA.append(x)
-	X_LDA = np.array(X_LDA).T
-	# train LDA
-	LDAW, centers, class_labels = myLDA(X_LDA, id_label)
-	Y_LDA = []
-	for idx in range(faces.shape[1]):
-		y = np.dot(np.dot(LDAW.T, W1.T), (faces[:, idx] - m))
-		Y_LDA.append(y)
+		y = np.dot(W_e.T, (faces.T[idx] - m))
+		Y_PCA.append(y)
+	Z = enroll(train_path)
+	for idx in range(len(Y_PCA)):
+		Z_cores = [np.linalg.norm(Y_PCA[idx] - Z[i], ord=2) for i in range(len(Z))]
+		ans = Z_cores.index(min(Z_cores))
+		if (idx + 1) % 10:
+			print(ans, end=' ')
+		else:
+			print(ans)
+
+
+def display_eigenfaces(train_path):
+	faces, labels = read_faces(train_path)
+	(W, LL, m) = myPCA(faces)
+	eigenfaces = W[:, :8]
+	re_faces = [face.reshape(160, 140) for face in eigenfaces.T]  # reshape faces
+	m = m.reshape(160, 140)  # reshape mean vector
+	for item in (re_faces + m):
+		item = float2uint8(item)
+	try:
+		from matplotlib import pyplot as plt
+	except ImportError:
+		pass
+	_, axes = plt.subplots(3, 3)
+	for i in range(3):
+		for j in range(3):
+			if i == 2 and j == 2:
+				break
+			axes[i, j].imshow(re_faces[3 * i + j], cmap='gray')
+			axes[i, j].set_title('Eigenface {}'.format(3 * i + j + 1))
+	axes[2, 2].imshow(m, cmap='gray')
+	axes[2, 2].set_title('mean')
+	plt.savefig('Eight_EigenFaces.png')
+	plt.show()
+
+
+if __name__ == '__main__':
+	enroll(TRAIN_PATH)
+	identify(TEST_PATH, TRAIN_PATH)
+# display_eigenfaces(TRAIN_PATH)
