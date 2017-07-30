@@ -9,6 +9,8 @@ import scipy.linalg as linalg
 
 TRAIN_PATH = 'face/train'
 TEST_PATH = 'face/test'
+K = 30
+K1 = 90
 
 
 def ComputeNorm(x):
@@ -138,45 +140,42 @@ def PCA_enroll(train_path):
 	faces, labels = read_faces(train_path)
 	# train PCA
 	(W, LL, m) = myPCA(faces)
-	K = 30
 	W_e = W[:, :K]
 	# PCA extract
-	Y_PCA = []
-	for idx in range(faces.shape[1]):
-		y = np.dot(W_e.T, (faces.T[idx] - m))
-		Y_PCA.append(y)
+	Y_PCA = np.dot(W_e.T, (faces.T - m).T).T
 	# compute matrix Z
-	Z = []
-	for i in range(0, len(Y_PCA), 12):
-		z = Y_PCA[i:i + 12]
-		Z.append(np.mean(np.transpose(z), axis=1))
+	Z = [[] for i in range(10)]
+	for label, z in zip(labels, Y_PCA):
+		Z[label].append(z)
+	Z = [np.mean(m, axis=0) for m in Z]
 	Z = np.array(Z)
-	return Z
+	return Z, W_e, m
 
 
 def PCA_identify(test_path, train_path):
-	Z = PCA_enroll(train_path)
+	Z, W_e, m = PCA_enroll(train_path)
 	faces, labels = read_faces(test_path)
-	# train PCA
-	(W, LL, m) = myPCA(faces)
-	K = 30
-	W_e = W[:, :K]
 	# PCA extract
-	Y_PCA = []
-	for idx in range(faces.shape[1]):
-		y = np.dot(W_e.T, (faces.T[idx] - m))
-		Y_PCA.append(y)
+	Y_PCA = np.dot(W_e.T, (faces.T - m).T).T
+	identified_PCA = []
 	misjudge = 0
 	for idx in range(len(Y_PCA)):
-		Z_cores = [np.linalg.norm(Z[i] - Y_PCA[idx], ord=2) for i in range(len(Z))]
+		Z_cores = [np.linalg.norm(z - Y_PCA[idx], ord=2) for z in Z]
 		ans = Z_cores.index(min(Z_cores))
+		identified_PCA.append(ans)
 		if ans != (idx // 12):
 			misjudge += 1
+		'''
 		if (idx + 1) % 12:
 			print(ans, end=' ')
 		else:
 			print(ans)
-	print('accuracy:{:.2f}%'.format((1 - misjudge / len(Y_PCA)) * 100))
+		'''
+	confusion = np.zeros((10, 10))
+	for identify, origin in zip(identified_PCA, labels):
+		confusion[origin, identify] += 1
+	print('Confusion Matrix for PCA identify\n', confusion)
+	print('Accuracy of PCA identify is:{:.2f}%'.format((1 - misjudge / len(Y_PCA)) * 100))
 
 
 def display_eigenfaces(train_path):
@@ -210,60 +209,43 @@ def LDA_enroll(train_path):
 	# train PCA
 	(W, LL, m) = myPCA(faces)
 	# LDA extract
-	K1 = 90
 	W1 = W[:, :K1]
-	X_LDA = []
-	for idx in range(faces.shape[1]):
-		x = np.dot(W1.T, (faces.T[idx] - m))
-		X_LDA.append(x)
-	X_LDA = np.array(X_LDA).T
+	X_LDA = np.dot(W1.T, (faces.T - m).T)
 	# train LDA
-	LDAW, centers, class_labels = myLDA(X_LDA, id_label)
-	return centers
+	W_f, centers, class_labels = myLDA(X_LDA, id_label)
+	return centers, W_f, W1, m
 
 
 def LDA_identify(test_path, train_path):
-	Z = LDA_enroll(train_path)
+	Z, W_f, W1, m = LDA_enroll(train_path)
 	Z = Z.T
-	faces, id_label = read_faces(test_path)
-	# train PCA
-	(W, LL, m) = myPCA(faces)
-	# LDA extract
-	K1 = 90
-	W1 = W[:, :K1]
-	X_LDA = []
-	for idx in range(faces.shape[1]):
-		x = np.dot(W1.T, (faces.T[idx] - m))
-		X_LDA.append(x)
-	X_LDA = np.array(X_LDA).T
-	# train LDA
-	LDAW, _, _ = myLDA(X_LDA, id_label)
-	Y_LDA = []
-	for idx in range(faces.shape[1]):
-		y = np.dot(np.dot(LDAW.T, W1.T), (faces[:, idx] - m))
-		Y_LDA.append(y)
+	faces, labels = read_faces(test_path)
+	Y_LDA = np.dot(np.dot(W_f.T, W1.T), (faces.T - m).T).T
 	misjudge = 0
+	identified_LDA = []
 	for idx in range(0, len(Y_LDA)):
 		Z_cores = [np.linalg.norm(Y_LDA[idx] - Z[i], ord=2) for i in range(len(Z))]
 		ans = Z_cores.index(min(Z_cores))
+		identified_LDA.append(ans)
 		if ans != (idx // 12):
 			misjudge += 1
+			'''
 		if (idx + 1) % 12:
 			print(ans, end=' ')
 		else:
 			print(ans)
-	print('accuracy:{:.2f}%'.format((1 - misjudge / len(Y_LDA)) * 100))
+		'''
+	confusion = np.zeros((10, 10))
+	for identify, origin in zip(identified_LDA, labels):
+		confusion[origin, identify] += 1
+	print('Confusion Matrix for PCA identify\n', confusion)
+	print('Accuracy of LDA identify is:{:.2f}%'.format((1 - misjudge / len(Y_LDA)) * 100))
 
 
 def display_centers(train_path):
 	faces, id_label = read_faces(train_path)
-	# train PCA
-	(W, LL, m) = myPCA(faces)
-	# LDA extract
-	K1 = 90
-	W1 = W[:, :K1]
-	centers, _, Wf = LDA_enroll(train_path)
-	Cp = np.dot(Wf, centers)
+	Cf, Wf, W1, m = LDA_enroll(train_path)
+	Cp = np.dot(Wf, Cf)
 	Cr = np.dot(W1, Cp) + np.tile(m, (10, 1)).T  # tile m to consist the dimension
 	try:
 		from matplotlib import pyplot as plt
@@ -274,7 +256,7 @@ def display_centers(train_path):
 	for i in range(2):
 		for j in range(5):
 			axes[i, j].imshow(Cr[2 * i + j].reshape(160, 140), cmap='gray')
-			axes[i, j].set_title('Center {}'.format(2 * i + j))
+			axes[i, j].set_title('Center {}'.format(2 * i + j + 1))
 	plt.show()
 
 
@@ -305,10 +287,8 @@ def fusion_identify(test_path, train_path):
 
 
 if __name__ == '__main__':
-	# PCA_enroll(TRAIN_PATH)
 	# PCA_identify(TEST_PATH, TRAIN_PATH)
 	# display_eigenfaces(TRAIN_PATH)
-	# LDA_enroll(TRAIN_PATH)
-	LDA_identify(TEST_PATH, TRAIN_PATH)
-# display_centers(TRAIN_PATH)
+	# LDA_identify(TEST_PATH, TRAIN_PATH)
+	display_centers(TRAIN_PATH)
 # fusion_identify(TEST_PATH, TRAIN_PATH)
