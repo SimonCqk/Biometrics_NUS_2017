@@ -1,0 +1,20 @@
+Q:Print the confusion matrix and overall accuracy for three identifiers.
+A:See `Task.py`.
+
+Q:Compare the results for PCA feature and LDA feature, which feature is better? Why?
+A:The overall accuracy of PCA identify is 74.17% ,while LDA identify is 100%.
+  Obviously, LDA identifier performs better. The reason is --- PCA is unsupervised
+  but LDA is supervised, so while do LDA projection, the distance between classes does
+  effect on the final identify results.
+
+Q:Let alpha = 0.1, 0.2...0.9. Retrain your identifier for fused feature and re-calculate its
+  accuracy for each alpha. Plot accuracy versus alpha for different alpha. Submit this plot. What
+  do you observe?
+A:With the increasing of alpha value,the corresponding accuracy is decreasing.
+
+Q:Does the fused feature outperform both PCA feature and LDA feature? Why?
+A:Fused feature perform better than PCA feature but in most cases worse than LDA
+  feature.Because LDA is supervised but PCA is not, and number of samples is quite
+  limited, so LDA performs better in this case.When alpha value increases,the corresponding
+  accuracy decreases,because when alpha value is small, LDA feature weights more in
+  fused feature.And actually, the optimal alpha value dependent on specific scenes.

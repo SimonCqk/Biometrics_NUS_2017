@@ -143,11 +143,10 @@ def display_centers(train_path):
 	plt.show()
 
 
-def fusion_identify(test_path, train_path):
+def fusion_identify(test_path, train_path, alpha=0.5):
 	_, m, W_e, Y_PCA, labels = PCA_enroll(train_path)
 	_, W_f, W1, _, Y_LDA = LDA_enroll(train_path)
 	faces_test, labels_test = read_faces(test_path)
-	alpha = 0.5
 	# implement fusion schema to feature level (set alpha as 0.5)
 	Y_fusion = np.concatenate((alpha * Y_PCA, (1 - alpha) * Y_LDA), axis=0)
 	# compute mean matrix Z
@@ -179,12 +178,32 @@ def fusion_identify(test_path, train_path):
 	for identify, origin in zip(identified_fusion, labels):
 		confusion[origin, identify] += 1
 	print('Confusion Matrix for Fusion Schema identify.\n', confusion)
-	print('OverAll-Accuracy of Fusion Schema identify is:{:.2f}%'.format((1 - misjudge / len(Y_test)) * 100))
+	accuracy = 1 - misjudge / len(Y_test)
+	print('OverAll-Accuracy of Fusion Schema [alpha={1}] identify is:{0:.2f}%'.format(accuracy * 100, alpha))
+	return accuracy
+
+
+def display_diff_alpha():
+	alphas = [i / 10 for i in range(1, 10)]
+	accuracies = [fusion_identify(TEST_PATH, TRAIN_PATH, alpha) for alpha in alphas]
+	try:
+		from matplotlib import pyplot as plt
+	except:
+		raise ImportError
+	plt.plot(alphas, accuracies, 'bo')
+	plt.title('Different Alpha Values for Fusion Schema')
+	plt.xlabel('Alpha Values')
+	plt.ylabel('Corresponding Accuracy')
+	plt.savefig('DifferentAlphaValues.png')
+	plt.show()
 
 
 if __name__ == '__main__':
-	PCA_identify(TEST_PATH, TRAIN_PATH)
-	display_eigenfaces(TRAIN_PATH)
-	LDA_identify(TEST_PATH, TRAIN_PATH)
-	display_centers(TRAIN_PATH)
-	fusion_identify(TEST_PATH, TRAIN_PATH)
+	'''
+	PCA_identify(TEST_PATH, TRAIN_PATH)  # Task 1
+	display_eigenfaces(TRAIN_PATH)  # Task 2
+	LDA_identify(TEST_PATH, TRAIN_PATH)  # Task 3
+	display_centers(TRAIN_PATH)  # Task 4
+	fusion_identify(TEST_PATH, TRAIN_PATH)  # Task 5
+	'''
+	display_diff_alpha()
