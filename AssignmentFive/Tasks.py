@@ -17,7 +17,7 @@ def PCA_enroll(train_path):
 	W_e = W[:, :K]
 	# PCA extract
 	Y_PCA = np.dot(W_e.T, (faces.T - m).T).T
-	# compute matrix Z
+	# compute mean feature matrix Z
 	Z = [[] for i in range(10)]
 	for label, z in zip(labels, Y_PCA):
 		Z[label].append(z)
@@ -29,11 +29,12 @@ def PCA_enroll(train_path):
 def PCA_identify(test_path, train_path):
 	Z, m, W_e, *_ = PCA_enroll(train_path)
 	faces, labels = read_faces(test_path)
-	# PCA extract
+	# PCA extract for test faces
 	Y_PCA = np.dot(W_e.T, (faces.T - m).T).T
 	identified_PCA = []
 	misjudge = 0
 	for idx in range(len(Y_PCA)):
+		# compute Euclidean distance
 		Z_cores = [np.linalg.norm(z - Y_PCA[idx], ord=2) for z in Z]
 		ans = Z_cores.index(min(Z_cores))
 		identified_PCA.append(ans)
@@ -45,16 +46,18 @@ def PCA_identify(test_path, train_path):
 		else:
 			print(ans)
 		'''
+	# create confusion matrix
 	confusion = np.zeros((10, 10))
 	for identify, origin in zip(identified_PCA, labels):
 		confusion[origin, identify] += 1
-	print('Confusion Matrix for PCA identify\n', confusion)
-	print('Accuracy of PCA identify is:{:.2f}%'.format((1 - misjudge / len(Y_PCA)) * 100))
+	print('Confusion Matrix for PCA identify.\n', confusion)
+	print('OverAll-Accuracy of PCA identify is:{:.2f}%'.format((1 - misjudge / len(Y_PCA)) * 100))
 
 
 def display_eigenfaces(train_path):
 	faces, labels = read_faces(train_path)
 	(W, LL, m) = myPCA(faces)
+	# extract 8 largest eigen-values
 	eigenfaces = W[:, :8]
 	re_faces = [face.reshape(160, 140) for face in eigenfaces.T]  # reshape faces
 	m = m.reshape(160, 140)  # reshape mean vector
@@ -87,6 +90,7 @@ def LDA_enroll(train_path):
 	X_LDA = np.dot(W1.T, (faces.T - m).T)
 	# train LDA
 	W_f, centers, class_labels = myLDA(X_LDA, id_label)
+	# project face-matrix from PCA space to LDA space
 	Y_LDA = np.dot(np.dot(W_f.T, W1.T), (faces.T - m).T)
 	return centers, W_f, W1, m, Y_LDA
 
@@ -95,10 +99,12 @@ def LDA_identify(test_path, train_path):
 	Z, W_f, W1, m, _ = LDA_enroll(train_path)
 	Z = Z.T
 	faces, labels = read_faces(test_path)
+	# extract and project to LDA space
 	Y_LDA = np.dot(np.dot(W_f.T, W1.T), (faces.T - m).T).T
 	misjudge = 0
 	identified_LDA = []
 	for idx in range(0, len(Y_LDA)):
+		# compute Euclidean distance
 		Z_cores = [np.linalg.norm(Y_LDA[idx] - Z[i], ord=2) for i in range(len(Z))]
 		ans = Z_cores.index(min(Z_cores))
 		identified_LDA.append(ans)
@@ -110,16 +116,17 @@ def LDA_identify(test_path, train_path):
 		else:
 			print(ans)
 		'''
+	# create confusion matrix
 	confusion = np.zeros((10, 10))
 	for identify, origin in zip(identified_LDA, labels):
 		confusion[origin, identify] += 1
-	print('Confusion Matrix for PCA identify\n', confusion)
-	print('Accuracy of LDA identify is:{:.2f}%'.format((1 - misjudge / len(Y_LDA)) * 100))
+	print('Confusion Matrix for PCA identify.\n', confusion)
+	print('OverAll-Accuracy of LDA identify is:{:.2f}%'.format((1 - misjudge / len(Y_LDA)) * 100))
 
 
 def display_centers(train_path):
 	faces, id_label = read_faces(train_path)
-	Cf, Wf, W1, m = LDA_enroll(train_path)
+	Cf, Wf, W1, m, _ = LDA_enroll(train_path)
 	Cp = np.dot(Wf, Cf)
 	Cr = np.dot(W1, Cp) + np.tile(m, (10, 1)).T  # tile m to consist the dimension
 	try:
@@ -131,7 +138,8 @@ def display_centers(train_path):
 	for i in range(axes.shape[0]):
 		for j in range(axes.shape[1]):
 			axes[i, j].imshow(Cr[5 * i + j].reshape(160, 140), cmap='gray')
-			axes[i, j].set_title('Center {}'.format(5 * i + j))
+			axes[i, j].set_title('Center {}'.format(5 * i + j + 1))
+	plt.savefig('Ten_Centers.png')
 	plt.show()
 
 
@@ -140,18 +148,22 @@ def fusion_identify(test_path, train_path):
 	_, W_f, W1, _, Y_LDA = LDA_enroll(train_path)
 	faces_test, labels_test = read_faces(test_path)
 	alpha = 0.5
+	# implement fusion schema to feature level (set alpha as 0.5)
 	Y_fusion = np.concatenate((alpha * Y_PCA, (1 - alpha) * Y_LDA), axis=0)
+	# compute mean matrix Z
 	Z = [[] for i in range(10)]
 	for label, z in zip(labels, Y_fusion.T):
 		Z[label].append(z)
 	Z = [np.mean(z, axis=0) for z in Z]
 	Z = np.array(Z)
+	# make up fused-feature matrix for faces
 	Y_test = np.concatenate((alpha * (np.dot(W_e.T, (faces_test.T - m).T)), \
 							 (1 - alpha) * np.dot(np.dot(W_f.T, W1.T), (faces_test.T - m).T)), axis=0)
 	Y_test = Y_test.T
 	identified_fusion = []
 	misjudge = 0
 	for idx in range(0, len(Y_test)):
+		# compute Euclidean distance
 		Z_cores = [np.linalg.norm(Y_test[idx] - z, ord=2) for z in Z]
 		ans = Z_cores.index(min(Z_cores))
 		identified_fusion.append(ans)
@@ -166,13 +178,13 @@ def fusion_identify(test_path, train_path):
 	confusion = np.zeros((10, 10))
 	for identify, origin in zip(identified_fusion, labels):
 		confusion[origin, identify] += 1
-	print('Confusion Matrix for Fusion Schema identify\n', confusion)
-	print('Accuracy of Fusion Schema identify is:{:.2f}%'.format((1 - misjudge / len(Y_test)) * 100))
+	print('Confusion Matrix for Fusion Schema identify.\n', confusion)
+	print('OverAll-Accuracy of Fusion Schema identify is:{:.2f}%'.format((1 - misjudge / len(Y_test)) * 100))
 
 
 if __name__ == '__main__':
-	# PCA_identify(TEST_PATH, TRAIN_PATH)
-	# display_eigenfaces(TRAIN_PATH)
-	# LDA_identify(TEST_PATH, TRAIN_PATH)
-	# display_centers(TRAIN_PATH)
+	PCA_identify(TEST_PATH, TRAIN_PATH)
+	display_eigenfaces(TRAIN_PATH)
+	LDA_identify(TEST_PATH, TRAIN_PATH)
+	display_centers(TRAIN_PATH)
 	fusion_identify(TEST_PATH, TRAIN_PATH)
