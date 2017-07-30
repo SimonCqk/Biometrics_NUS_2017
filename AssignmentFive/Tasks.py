@@ -23,11 +23,11 @@ def PCA_enroll(train_path):
 		Z[label].append(z)
 	Z = [np.mean(m, axis=0) for m in Z]
 	Z = np.array(Z)
-	return Z, m, W_e, Y_PCA.T
+	return Z, m, W_e, Y_PCA.T, labels
 
 
 def PCA_identify(test_path, train_path):
-	Z, m, W_e, _ = PCA_enroll(train_path)
+	Z, m, W_e, *_ = PCA_enroll(train_path)
 	faces, labels = read_faces(test_path)
 	# PCA extract
 	Y_PCA = np.dot(W_e.T, (faces.T - m).T).T
@@ -136,19 +136,19 @@ def display_centers(train_path):
 
 
 def fusion_identify(test_path, train_path):
-	_, m, W_e, Y_PCA = PCA_enroll(train_path)
+	_, m, W_e, Y_PCA, labels = PCA_enroll(train_path)
 	_, W_f, W1, _, Y_LDA = LDA_enroll(train_path)
-	_, labels = read_faces(train_path)
 	faces_test, labels_test = read_faces(test_path)
 	alpha = 0.5
-	Y_fusion = np.concatenate(([alpha * Y_PCA], [(1 - alpha) * Y_LDA]), axis=1)
+	Y_fusion = np.concatenate((alpha * Y_PCA, (1 - alpha) * Y_LDA), axis=0)
 	Z = [[] for i in range(10)]
-	for label, z in zip(labels, Y_fusion):
+	for label, z in zip(labels, Y_fusion.T):
 		Z[label].append(z)
 	Z = [np.mean(z, axis=0) for z in Z]
 	Z = np.array(Z)
 	Y_test = np.concatenate((alpha * (np.dot(W_e.T, (faces_test.T - m).T)), \
 							 (1 - alpha) * np.dot(np.dot(W_f.T, W1.T), (faces_test.T - m).T)), axis=0)
+	Y_test = Y_test.T
 	identified_fusion = []
 	misjudge = 0
 	for idx in range(0, len(Y_test)):
@@ -157,11 +157,17 @@ def fusion_identify(test_path, train_path):
 		identified_fusion.append(ans)
 		if ans != (idx // 12):
 			misjudge += 1
+		'''
 		if (idx + 1) % 12:
 			print(ans, end=' ')
 		else:
 			print(ans)
-	print('accuracy:{:.2f}%'.format((1 - misjudge / len(Y_LDA)) * 100))
+		'''
+	confusion = np.zeros((10, 10))
+	for identify, origin in zip(identified_fusion, labels):
+		confusion[origin, identify] += 1
+	print('Confusion Matrix for Fusion Schema identify\n', confusion)
+	print('Accuracy of Fusion Schema identify is:{:.2f}%'.format((1 - misjudge / len(Y_test)) * 100))
 
 
 if __name__ == '__main__':
