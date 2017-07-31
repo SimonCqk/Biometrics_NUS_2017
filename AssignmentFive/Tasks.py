@@ -199,11 +199,9 @@ def display_diff_alpha():
 
 
 if __name__ == '__main__':
-	'''
 	PCA_identify(TEST_PATH, TRAIN_PATH)  # Task 1
 	display_eigenfaces(TRAIN_PATH)  # Task 2
 	LDA_identify(TEST_PATH, TRAIN_PATH)  # Task 3
 	display_centers(TRAIN_PATH)  # Task 4
 	fusion_identify(TEST_PATH, TRAIN_PATH)  # Task 5
-	'''
 	display_diff_alpha()
